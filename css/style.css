@@ -1,0 +1,178 @@
+/* ====== 竹笛练习网站 v1.0 ====== */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:"Microsoft YaHei","SimHei","PingFang SC",sans-serif;
+  background:#f5f0e8;color:#333;min-height:100vh;
+}
+
+/* ---- 导航 ---- */
+.nav{
+  background:#2c2416;color:#e8d5b0;padding:10px 20px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.nav a{color:#e8d5b0;text-decoration:none;font-size:15px;}
+.nav a:hover{color:#f0c060;}
+.nav .brand{font-size:18px;font-weight:bold;letter-spacing:2px;margin-right:auto;}
+.nav .tag{font-size:11px;background:#5a3e1b;padding:2px 8px;border-radius:3px;}
+
+/* ---- 主页 ---- */
+.home{max-width:800px;margin:30px auto;padding:0 16px;}
+.home h2{text-align:center;margin-bottom:20px;font-size:22px;color:#2c2416;}
+.song-list{display:flex;flex-direction:column;gap:12px;}
+.song-card{
+  background:#fff;border-radius:8px;padding:18px 20px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  cursor:pointer;transition:all 0.2s;
+  display:flex;justify-content:space-between;align-items:center;
+  border-left:4px solid #8b6914;
+}
+.song-card:hover{box-shadow:0 4px 14px rgba(0,0,0,0.15);transform:translateY(-2px);}
+.song-card .info{}
+.song-card .title{font-size:19px;font-weight:bold;color:#2c2416;}
+.song-card .meta{font-size:12px;color:#888;margin-top:3px;}
+.song-card .arrow{font-size:22px;color:#8b6914;}
+
+/* ---- 播放页 ---- */
+.player-page{max-width:1100px;margin:0 auto;padding:10px 16px 30px;}
+
+/* 顶部控制栏 */
+.ctrl-bar{
+  background:#fff;border-radius:8px;padding:12px 16px;margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.ctrl-bar button{
+  padding:8px 16px;border:none;border-radius:5px;
+  font-size:14px;cursor:pointer;font-weight:bold;
+  transition:all 0.15s;
+}
+.btn-play{background:#4a7c3f;color:#fff;}
+.btn-play:hover{background:#3d6634;}
+.btn-stop{background:#b33;color:#fff;}
+.btn-stop:hover{background:#922;}
+.btn-metro{background:#5a3e1b;color:#f0c060;}
+.btn-metro:hover{background:#4a3216;}
+.btn-back{background:#eee;color:#555;}
+.btn-back:hover{background:#ddd;}
+.btn-accomp{background:#8b6914;color:#fff;}
+.btn-accomp:hover{background:#6b5010;}
+
+.ctrl-group{display:flex;align-items:center;gap:6px;}
+.ctrl-group label{font-size:12px;color:#666;white-space:nowrap;}
+.ctrl-group input[type=range]{width:80px;cursor:pointer;}
+.ctrl-group .val{font-size:13px;font-weight:bold;min-width:36px;text-align:center;}
+
+/* 速度/BPM显示 */
+.bpm-display{font-size:28px;font-weight:bold;color:#2c2416;min-width:60px;text-align:center;}
+
+/* 时间/进度 */
+.time-info{font-size:13px;color:#888;margin-left:auto;}
+.progress-bar{
+  width:100%;height:4px;background:#e0d8c8;border-radius:2px;
+  margin-top:4px;position:relative;cursor:pointer;
+}
+.progress-fill{height:100%;background:#8b6914;border-radius:2px;transition:width 0.1s;}
+
+/* 缩放控制 */
+.zoom-ctrl{display:flex;align-items:center;gap:4px;}
+.zoom-ctrl button{
+  width:28px;height:28px;border-radius:50%;border:1.5px solid #999;
+  background:#fff;font-size:16px;cursor:pointer;line-height:1;
+}
+.zoom-ctrl button:hover{background:#eee;}
+.zoom-val{font-size:12px;color:#666;min-width:36px;text-align:center;}
+
+/* 曲谱容器 */
+.score-wrap{
+  background:#fff;border-radius:8px;padding:16px 12px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);
+  overflow:auto;max-height:65vh;
+}
+.score-inner{min-width:fit-content;transition:transform 0.2s;}
+
+/* ---- 简谱渲染样式 ---- */
+.jp-section{font-size:11px;color:#999;margin:6px 0 2px;padding-left:4px;}
+.jp-sys{
+  display:flex;align-items:flex-end;margin:0;
+  border-left:1.5px solid #000;height:28px;
+}
+.jp-sys.end{border-right:2.5px solid #000;}
+.jp-bar{display:flex;flex:1;align-items:flex-end;}
+.jp-bl{width:1.2px;background:#000;flex-shrink:0;align-self:stretch;margin:0 2px;}
+.jp-beat{
+  flex:1;display:flex;align-items:flex-end;justify-content:center;
+  position:relative;min-width:18px;padding:0 1px;
+  transition:background 0.15s;
+}
+.jp-beat.active{background:#ffe08a;border-radius:2px;}
+
+.jp-note{
+  display:inline-block;font-size:17px;font-weight:bold;
+  font-family:"Courier New",Consolas,monospace;
+  line-height:1;position:relative;min-width:9px;text-align:center;
+}
+.jp-note.rest{color:#bbb;}
+.jp-note.hi::after{
+  content:"·";position:absolute;top:-10px;left:50%;
+  transform:translateX(-50%);font-size:20px;font-weight:bold;
+}
+.jp-note.lo::after{
+  content:"·";position:absolute;bottom:-10px;left:50%;
+  transform:translateX(-50%);font-size:20px;font-weight:bold;
+}
+.jp-hold{font-size:17px;font-weight:bold;color:#555;}
+.jp-empty{min-width:12px;}
+.jp-one .jp-note{font-size:17px;}
+.jp-sub{display:inline-flex;align-items:flex-end;}
+.jp-sub .jp-note{font-size:15px;}
+.jp-sub .jp-note.hi::after{font-size:17px;top:-8px;}
+.jp-sub .jp-note.lo::after{font-size:17px;bottom:-8px;}
+.ul{border-bottom:1.8px solid #000;padding-bottom:1px;}
+
+.jp-lr{
+  display:flex;margin:0 0 2px;
+  border-left:1.5px solid transparent;height:12px;
+}
+.jp-lr.end{border-right:2.5px solid transparent;}
+.jp-lb{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:#666;line-height:1;min-width:0;
+  overflow:hidden;white-space:nowrap;
+}
+
+/* 技法标注 */
+.jp-tech{
+  position:absolute;top:-11px;font-size:7px;color:#b33;
+  white-space:nowrap;pointer-events:none;
+  font-family:"Microsoft YaHei","SimHei",sans-serif;
+}
+
+/* ---- 节拍器面板 ---- */
+.metro-panel{
+  background:#2c2416;color:#e8d5b0;border-radius:8px;
+  padding:12px 16px;margin-top:10px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.metro-panel .leds{display:flex;gap:4px;}
+.metro-panel .led{
+  width:20px;height:20px;border-radius:50%;
+  background:#5a4a2a;transition:background 0.08s;
+}
+.metro-panel .led.on{background:#f0c060;box-shadow:0 0 8px #f0c060;}
+.metro-panel .led.accent{background:#f08030;}
+
+/* ---- 伴奏文件提示 ---- */
+.accomp-status{
+  font-size:11px;padding:4px 8px;border-radius:3px;
+}
+.accomp-status.ok{background:#d4edda;color:#155724;}
+.accomp-status.none{background:#fff3cd;color:#856404;}
+
+/* 响应式 */
+@media(max-width:600px){
+  .ctrl-bar{gap:6px;padding:8px;}
+  .ctrl-bar button{padding:6px 10px;font-size:12px;}
+  .jp-note{font-size:14px;}
+  .jp-sub .jp-note{font-size:12px;}
+}
