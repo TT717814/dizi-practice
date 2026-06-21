@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>竹笛练习 - 曲谱播放</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="brand">🎵 竹笛练习助手</span>
+  <span class="tag" id="navTag">G调 · 筒音作5</span>
+  <a href="index.html">← 曲目列表</a>
+</nav>
+
+<div class="player-page">
+
+  <!-- 控制栏 -->
+  <div class="ctrl-bar">
+    <button class="btn-play" id="btnPlay" onclick="togglePlay()">▶ 开始</button>
+    <button class="btn-stop" id="btnStop" onclick="stopAll()">■ 停止</button>
+    <button class="btn-metro" id="btnMetroOnly" onclick="toggleMetroOnly()">🥁 节拍器</button>
+    <button class="btn-accomp" id="btnAccomp" onclick="toggleAccomp()">🎧 伴奏</button>
+
+    <div class="ctrl-group">
+      <label>速度</label>
+      <input type="range" id="bpmSlider" min="30" max="300" value="135" oninput="changeBpm(this.value)">
+      <span class="bpm-display" id="bpmDisplay">135</span>
+      <span style="font-size:11px;color:#888;">BPM</span>
+    </div>
+
+    <div class="zoom-ctrl">
+      <button onclick="zoomOut()">−</button><span class="zoom-val" id="zoomVal">100%</span><button onclick="zoomIn()">+</button>
+    </div>
+
+    <span class="time-info" id="timeInfo">00:00</span>
+
+    <button class="btn-back" onclick="window.location.href='index.html'">← 返回</button>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress-bar" id="progressBar" onclick="seekProgress(event)">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <!-- 曲谱区域 -->
+  <div class="score-wrap" id="scoreWrap">
+    <div class="score-inner" id="scoreInner"></div>
+  </div>
+
+  <!-- 节拍器指示灯 -->
+  <div class="metro-panel" id="metroPanel">
+    <span style="font-size:13px;">节拍器</span>
+    <div class="leds" id="leds">
+      <span class="led"></span><span class="led"></span>
+      <span class="led"></span><span class="led"></span>
+    </div>
+    <span id="beatCounter" style="font-size:12px;color:#aaa;">--</span>
+    <span id="accompStatus" class="accomp-status none">伴奏: 节拍器模式</span>
+    <span style="font-size:10px;color:#888;margin-left:auto;">💡 放伴奏MP3到 audio/ 目录可启用原声</span>
+  </div>
+
+</div>
+
+<script src="js/songs.js"></script>
+<script src="js/jianpu.js"></script>
+<script src="js/metronome.js"></script>
+<script src="js/player.js"></script>
+
+<script>
+// ====== 初始化 ======
+const params = new URLSearchParams(window.location.search);
+const songIdx = parseInt(params.get('s')) || 0;
+const song = SONGS[songIdx];
+
+document.title = song.title + ' - 竹笛练习';
+document.getElementById('bpmSlider').value = song.tempo;
+document.getElementById('bpmDisplay').textContent = song.tempo;
+
+// 初始化三大模块
+const renderer = new JianpuRenderer('scoreInner');
+const metro = new Metronome();
+const player = new AccompanimentPlayer();
+player.init(metro);
+player.tempo = song.tempo;
+
+// 渲染曲谱
+renderer.render(song);
+const totalBeats = renderer.getTotalBeats(song);
+player.totalBeats = totalBeats;
+
+// ====== 节拍器指示灯 ======
+const leds = document.querySelectorAll('#leds .led');
+const beatsPerBar = song.timeSig[0];
+// 只显示需要的LED数
+leds.forEach((led, i) => { if (i >= beatsPerBar) led.style.display = 'none'; });
+
+function updateLeds(beatInBar) {
+  leds.forEach((led, i) => {
+    led.classList.remove('on', 'accent');
+    if (i === beatInBar) {
+      led.classList.add('on');
+      if (i === 0) led.classList.add('accent');
+    }
+  });
+}
+
+// ====== 节拍器回调 → 光标 + LED ======
+metro.onBeat = (globalBeat, beatInBar, barNum) => {
+  if (globalBeat < 0 || globalBeat >= totalBeats) return;
+  renderer.highlightBeat(globalBeat);
+  updateLeds(beatInBar);
+  document.getElementById('beatCounter').textContent =
+    '第' + (barNum + 1) + '小节 · 第' + (beatInBar + 1) + '拍';
+
+  // 更新进度条
+  const pct = ((globalBeat / totalBeats) * 100).toFixed(1);
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // 自动滚动（每隔一定拍数）
+  if (globalBeat % (beatsPerBar * 2) === 0) {
+    renderer.scrollToBeat(globalBeat);
+  }
+};
+
+// ====== 播放器时间回调 ======
+player.onTimeUpdate = (elapsed, beat, timeStr) => {
+  document.getElementById('timeInfo').textContent = timeStr;
+};
+
+// ====== 控制函数 ======
+let playState = 'stopped'; // 'stopped' | 'metronome' | 'accompaniment'
+
+function togglePlay() {
+  const btn = document.getElementById('btnPlay');
+  if (playState === 'stopped') {
+    // 开始播放
+    metro.init();
+    playState = 'metronome';
+    player.mode = 'metronome';
+    player.start({ tempo: song.tempo, totalBeats, mode: 'metronome' });
+    btn.textContent = '⏸ 暂停';
+    btn.className = 'btn-stop';
+    document.getElementById('accompStatus').textContent = '伴奏: 节拍器模式';
+    document.getElementById('accompStatus').className = 'accomp-status none';
+  } else {
+    // 暂停
+    player.stop();
+    playState = 'stopped';
+    btn.textContent = '▶ 开始';
+    btn.className = 'btn-play';
+    updateLeds(-1);
+    document.getElementById('beatCounter').textContent = '--';
+  }
+}
+
+function stopAll() {
+  player.stop();
+  metro.reset();
+  playState = 'stopped';
+  document.getElementById('btnPlay').textContent = '▶ 开始';
+  document.getElementById('btnPlay').className = 'btn-play';
+  renderer.highlightBeat(-1);
+  updateLeds(-1);
+  document.getElementById('beatCounter').textContent = '--';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('timeInfo').textContent = '00:00';
+}
+
+function toggleMetroOnly() {
+  if (playState !== 'metronome') {
+    stopAll();
+    metro.init();
+    playState = 'metronome';
+    player.mode = 'metronome';
+    player.start({ tempo: song.tempo, totalBeats, mode: 'metronome' });
+    document.getElementById('btnPlay').textContent = '⏸ 暂停';
+    document.getElementById('btnPlay').className = 'btn-stop';
+    document.getElementById('accompStatus').textContent = '伴奏: 节拍器模式';
+    document.getElementById('accompStatus').className = 'accomp-status none';
+  }
+}
+
+async function toggleAccomp() {
+  // 尝试加载伴奏文件
+  const accompUrl = 'audio/' + song.id + '.mp3';
+  const btn = document.getElementById('btnAccomp');
+
+  if (playState === 'accompaniment') {
+    stopAll();
+    document.getElementById('accompStatus').textContent = '伴奏: 已停止';
+    document.getElementById('accompStatus').className = 'accomp-status none';
+    return;
+  }
+
+  btn.textContent = '🎧 加载中...';
+  const loaded = await player.loadAudio(accompUrl);
+
+  if (loaded) {
+    stopAll();
+    playState = 'accompaniment';
+    player.mode = 'accompaniment';
+    player.start({ tempo: song.tempo, totalBeats, mode: 'accompaniment' });
+    document.getElementById('btnPlay').textContent = '⏸ 暂停';
+    document.getElementById('btnPlay').className = 'btn-stop';
+    document.getElementById('accompStatus').textContent = '伴奏: ✅ 原声伴奏';
+    document.getElementById('accompStatus').className = 'accomp-status ok';
+  } else {
+    // 降级到节拍器
+    btn.textContent = '🎧 伴奏';
+    document.getElementById('accompStatus').textContent = '伴奏: ⚠ 未找到文件，用节拍器';
+    document.getElementById('accompStatus').className = 'accomp-status none';
+    if (playState === 'stopped') toggleMetroOnly();
+  }
+}
+
+function changeBpm(val) {
+  const bpm = parseInt(val);
+  document.getElementById('bpmDisplay').textContent = bpm;
+  song.tempo = bpm;
+  if (metro) metro.setBpm(bpm);
+  if (player) {
+    player.tempo = bpm;
+    player.totalBeats = totalBeats;
+  }
+}
+
+function zoomIn() {
+  const current = renderer.scale;
+  renderer.setScale(Math.min(2.0, current + 0.1));
+  document.getElementById('zoomVal').textContent = Math.round(renderer.scale * 100) + '%';
+}
+
+function zoomOut() {
+  const current = renderer.scale;
+  renderer.setScale(Math.max(0.5, current - 0.1));
+  document.getElementById('zoomVal').textContent = Math.round(renderer.scale * 100) + '%';
+}
+
+function seekProgress(e) {
+  const bar = document.getElementById('progressBar');
+  const rect = bar.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  const targetBeat = Math.floor(pct * totalBeats);
+  player.seekTo(targetBeat);
+  document.getElementById('progressFill').style.width = (pct * 100).toFixed(1) + '%';
+}
+
+// ====== 键盘快捷键 ======
+document.addEventListener('keydown', e => {
+  switch(e.code) {
+    case 'Space':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'Escape':
+      stopAll();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      player.seekTo(Math.max(0, player.currentGlobalBeat - beatsPerBar));
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      player.seekTo(Math.min(totalBeats - 1, player.currentGlobalBeat + beatsPerBar));
+      break;
+  }
+});
+
+// ====== 标题显示 ======
+document.getElementById('navTag').textContent = 'G调 · 筒音作5 · ♩=' + song.tempo;
+
+console.log('🎵 竹笛练习助手已就绪');
+console.log('  曲目:', song.title);
+console.log('  调性: 1=G  筒音作5');
+console.log('  总拍数:', totalBeats);
+console.log('  空格=播放/暂停  Esc=停止  ←→=跳转');
+console.log('  放伴奏MP3到 audio/ 文件夹即可启用原声伴奏');
+</script>
+
+</body>
+</html>
