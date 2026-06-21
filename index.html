@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>竹笛练习 · G调筒音作5</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="brand">🎵 竹笛练习助手</span>
+  <span class="tag">G调 · 筒音作5</span>
+  <a href="index.html">曲目</a>
+</nav>
+
+<div class="home">
+  <h2>📜 曲目列表</h2>
+  <div class="song-list">
+    <!-- 由JS动态生成 -->
+  </div>
+  <div style="text-align:center;margin-top:30px;font-size:12px;color:#aaa;">
+    点击曲目进入练习 · 内置节拍器+伴奏+光标跟踪 · 支持缩放
+  </div>
+</div>
+
+<script src="js/songs.js"></script>
+<script>
+(function(){
+  const list = document.querySelector('.song-list');
+  SONGS.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'song-card';
+    card.onclick = () => {
+      window.location.href = 'player.html?s=' + i;
+    };
+    card.innerHTML = `
+      <div class="info">
+        <div class="title">${s.title}</div>
+        <div class="meta">${s.author} &emsp; ♩=${s.tempo} &emsp; ${s.timeSig[0]}/${s.timeSig[1]}拍 &emsp; ${s.style}</div>
+      </div>
+      <span class="arrow">▶</span>
+    `;
+    list.appendChild(card);
+  });
+})();
+</script>
+
+</body>
+</html>
